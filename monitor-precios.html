@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor de Precios — Farmacia San Blas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0c0f;
+    --panel:     #11141a;
+    --border:    #1e2430;
+    --accent:    #00e5a0;
+    --danger:    #ff3d5a;
+    --warn:      #ffb020;
+    --text:      #e8ecf0;
+    --muted:     #5a6478;
+    --gdl:       #e63946;
+    --ben:       #457b9d;
+    --sim:       #2a9d8f;
+    --ml:        #ffe600;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID NOISE BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, var(--border) 39px, var(--border) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, var(--border) 39px, var(--border) 40px);
+    opacity: 0.25;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,12,15,0.95);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; }
+  .logo-sub  { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  .header-status {
+    display: flex; align-items: center; gap: 20px;
+  }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 100px;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    animation: none;
+  }
+  .dot.active { background: var(--accent); animation: pulse 2s infinite; }
+  .dot.error  { background: var(--danger); }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    position: relative; z-index: 1;
+    max-width: 1400px; margin: 0 auto;
+    padding: 28px 32px;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi:hover { border-color: var(--accent); }
+  .kpi::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .kpi:hover::before { transform: scaleX(1); }
+  .kpi.danger::before  { background: var(--danger); }
+  .kpi.warn::before    { background: var(--warn); }
+
+  .kpi-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px; font-weight: 700; line-height: 1;
+    color: var(--text);
+  }
+  .kpi.danger .kpi-value { color: var(--danger); }
+  .kpi.warn   .kpi-value { color: var(--warn); }
+  .kpi.good   .kpi-value { color: var(--accent); }
+  .kpi-sub {
+    font-size: 10px; color: var(--muted); margin-top: 4px;
+  }
+
+  /* ── SEARCH PANEL ── */
+  .search-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 28px;
+  }
+
+  .search-row {
+    display: flex; gap: 12px; align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .field {
+    display: flex; flex-direction: column; gap: 6px;
+    flex: 1; min-width: 180px;
+  }
+  .field label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .field input, .field select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 13px;
+    padding: 10px 14px; border-radius: 8px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--bg); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 10px 22px; border-radius: 8px;
+    border: none; cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 8px;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent); color: #000;
+  }
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-danger {
+    background: transparent; color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+
+  /* Competidor selector buttons */
+  .comp-btns {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .comp-btn {
+    padding: 7px 16px; border-radius: 100px;
+    font-size: 12px; font-weight: 700;
+    border: 1px solid transparent;
+    cursor: pointer; transition: all 0.15s;
+    background: var(--bg);
+    color: var(--muted);
+  }
+  .comp-btn:hover { color: var(--text); }
+  .comp-btn.gdl { border-color: var(--gdl); }
+  .comp-btn.gdl.active { background: var(--gdl); color: #fff; }
+  .comp-btn.ben { border-color: var(--ben); }
+  .comp-btn.ben.active { background: var(--ben); color: #fff; }
+  .comp-btn.sim { border-color: var(--sim); }
+  .comp-btn.sim.active { background: var(--sim); color: #fff; }
+  .comp-btn.all { border-color: var(--accent); }
+  .comp-btn.all.active { background: var(--accent); color: #000; }
+
+  /* ── PROGRESS / SCANNING ── */
+  .scan-area {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-top: 14px;
+    display: none;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+  }
+  .scan-area.visible { display: block; }
+  .scan-bar-wrap {
+    height: 4px; background: var(--border); border-radius: 2px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .scan-bar {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    width: 0%; transition: width 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .scan-bar::after {
+    content: '';
+    position: absolute; top: 0; right: 0; bottom: 0; width: 60px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
+    animation: shimmer 1.2s infinite;
+  }
+  @keyframes shimmer { 0%{opacity:0} 50%{opacity:1} 100%{opacity:0} }
+
+  .scan-log {
+    max-height: 120px; overflow-y: auto;
+    color: var(--muted); line-height: 1.8;
+    font-size: 11px;
+  }
+  .scan-log .found    { color: var(--accent); }
+  .scan-log .cheaper  { color: var(--danger); }
+  .scan-log .notfound { color: var(--muted); }
+
+  /* ── RESULTS TABLE ── */
+  .results-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px; flex-wrap: wrap;
+  }
+  .results-count {
+    font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted);
+  }
+  .results-count span { color: var(--text); font-weight: 700; }
+
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+  }
+  th {
+    background: var(--bg);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    padding: 10px 16px; text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap; cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--text); }
+  th.sorted { color: var(--accent); }
+
+  td {
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(30,36,48,0.6);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .col-nombre { max-width: 250px; }
+  .nombre-text { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clave-text { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  .price-tag {
+    font-family: 'Space Mono', monospace; font-weight: 700; font-size: 14px;
+  }
+  .price-tag.mine  { color: var(--text); }
+  .price-tag.comp  { }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 100px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .badge.cheaper  { background: rgba(255,61,90,0.15);  color: var(--danger); border: 1px solid rgba(255,61,90,0.3); }
+  .badge.pricier  { background: rgba(0,229,160,0.12);  color: var(--accent); border: 1px solid rgba(0,229,160,0.25); }
+  .badge.same     { background: rgba(90,100,120,0.2);  color: var(--muted);  border: 1px solid var(--border); }
+
+  .comp-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .comp-tag.gdl { background: rgba(230,57,70,0.15); color: var(--gdl); }
+  .comp-tag.ben { background: rgba(69,123,157,0.2);  color: var(--ben); }
+  .comp-tag.sim { background: rgba(42,157,143,0.2);  color: var(--sim); }
+
+  .diff-pct {
+    font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+  }
+  .diff-pct.neg { color: var(--danger); }
+  .diff-pct.pos { color: var(--accent); }
+
+  .link-btn {
+    font-size: 11px; color: var(--muted); text-decoration: none;
+    padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .link-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .empty-desc { font-size: 13px; line-height: 1.6; }
+
+  /* ── FILTER TABS ── */
+  .filter-tabs {
+    display: flex; gap: 4px;
+    background: var(--bg); padding: 4px; border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    padding: 6px 14px; border-radius: 6px; border: none;
+    background: transparent; color: var(--muted);
+    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .tab.active { background: var(--panel); color: var(--text); }
+  .tab.danger.active { background: rgba(255,61,90,0.2); color: var(--danger); }
+
+  /* ── PROXY STATUS NOTICE ── */
+  .notice {
+    border-radius: 10px; padding: 14px 18px;
+    font-size: 12px; line-height: 1.7; margin-bottom: 14px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .notice.info { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.2); }
+  .notice.warn { background: rgba(255,176,32,0.08); border: 1px solid rgba(255,176,32,0.25); }
+  .notice.error{ background: rgba(255,61,90,0.08);  border: 1px solid rgba(255,61,90,0.25); }
+  .notice-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .notice code {
+    background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+  }
+
+  /* ── IMPORT AREA ── */
+  .drop-area {
+    border: 2px dashed var(--border);
+    border-radius: 10px; padding: 30px;
+    text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--bg);
+    margin-top: 14px;
+  }
+  .drop-area:hover, .drop-area.dragover {
+    border-color: var(--accent);
+    background: rgba(0,229,160,0.05);
+  }
+  .drop-area p { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .drop-area strong { color: var(--text); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    header { padding: 14px 18px; }
+    main { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💊</div>
+    <div>
+      <div class="logo-text">MONITOR DE PRECIOS</div>
+      <div class="logo-sub">FARMACIA SAN BLAS — COMPETENCIA</div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-pill" id="proxyStatus">
+      <div class="dot" id="proxyDot"></div>
+      <span id="proxyText">Verificando proxy...</span>
+    </div>
+    <div class="status-pill">
+      <span id="lastScan">Sin escaneo aún</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- AVISO DE PROXY -->
+  <div id="proxyNotice" class="notice warn" style="display:none">
+    <div class="notice-icon">⚠️</div>
+    <div>
+      <strong>Proxy no detectado.</strong> Para escanear precios en tiempo real necesitas correr el proxy local.<br>
+      En tu computadora, en la carpeta del proyecto: <code>npm install</code> y luego <code>node proxy.js</code><br>
+      Una vez corriendo, recarga esta página. También puedes <strong>importar resultados CSV</strong> guardados previamente.
+    </div>
+  </div>
+
+  <div id="proxyOk" class="notice info" style="display:none">
+    <div class="notice-icon">✅</div>
+    <div>Proxy conectado en <code>localhost:3030</code>. Listo para escanear precios en tiempo real.</div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="section-title">Resumen</div>
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi">
+      <div class="kpi-label">Productos cargados</div>
+      <div class="kpi-value" id="kpiTotal">0</div>
+      <div class="kpi-sub">De tu catálogo SAV</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Comparados</div>
+      <div class="kpi-value" id="kpiComp">0</div>
+      <div class="kpi-sub">Con precios encontrados</div>
+    </div>
+    <div class="kpi danger">
+      <div class="kpi-label">Ellos más baratos</div>
+      <div class="kpi-value" id="kpiCheaper">0</div>
+      <div class="kpi-sub">Requieren atención</div>
+    </div>
+    <div class="kpi good">
+      <div class="kpi-label">Yo más barato</div>
+      <div class="kpi-value" id="kpiPricier">0</div>
+      <div class="kpi-sub">Buen posicionamiento</div>
+    </div>
+    <div class="kpi warn">
+      <div class="kpi-label">Diferencia máx.</div>
+      <div class="kpi-value" id="kpiMaxDiff">—</div>
+      <div class="kpi-sub">Producto más urgente</div>
+    </div>
+  </div>
+
+  <!-- PANEL DE ESCANEO -->
+  <div class="section-title">Escaneo</div>
+  <div class="search-panel">
+
+    <!-- Selección de competidores -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
+        Competidores a monitorear
+      </div>
+      <div class="comp-btns">
+        <button class="comp-btn all active" onclick="toggleAll(this)">Todos</button>
+        <button class="comp-btn gdl active" data-comp="guadalajara" onclick="toggleComp(this)">🔴 Farmacias Guadalajara</button>
+        <button class="comp-btn ben active" data-comp="benavides" onclick="toggleComp(this)">🔵 Farmacias Benavides</button>
+        <button class="comp-btn sim active" data-comp="similares" onclick="toggleComp(this)">🟢 Farmacias Similares</button>
+      </div>
+    </div>
+
+    <div class="search-row">
+      <div class="field" style="max-width:120px">
+        <label>Top productos</label>
+        <input type="number" id="topN" value="50" min="1" max="500">
+      </div>
+      <div class="field">
+        <label>Buscar producto específico (opcional)</label>
+        <input type="text" id="searchProduct" placeholder="Nombre del producto...">
+      </div>
+      <div class="field" style="max-width:160px">
+        <label>Ordenar por</label>
+        <select id="sortBy">
+          <option value="valor_neto">Mayor valor neto</option>
+          <option value="precio_propio">Mayor precio</option>
+          <option value="margen">Mayor margen</option>
+          <option value="existencia">Mayor existencia</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btnScan" onclick="iniciarEscaneo()">
+        🔍 Escanear precios
+      </button>
+      <button class="btn btn-secondary" onclick="exportarCSV()">
+        ↓ Exportar CSV
+      </button>
+    </div>
+
+    <!-- Importar CSV anterior -->
+    <div id="importArea" class="drop-area" onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="handleDrop(event)">
+      <div style="font-size:28px">📂</div>
+      <p><strong>Importar catálogo CSV</strong> o resultados previos<br>
+      Arrastra aquí o haz clic — compatible con el CSV del Dashboard</p>
+      <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="handleFile(this.files[0])">
+    </div>
+
+    <!-- Progreso del escaneo -->
+    <div class="scan-area" id="scanArea">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:11px">
+        <span id="scanStatus" style="color:var(--accent)">Iniciando...</span>
+        <span id="scanCounter" style="color:var(--muted)">0 / 0</span>
+      </div>
+      <div class="scan-bar-wrap">
+        <div class="scan-bar" id="scanBar"></div>
+      </div>
+      <div class="scan-log" id="scanLog"></div>
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="results-wrap">
+    <div class="results-header">
+      <div class="results-count">
+        Mostrando <span id="countVisible">0</span> resultados
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="filter-tabs">
+          <button class="tab active" onclick="filtrarTabla('todos', this)">Todos</button>
+          <button class="tab danger" onclick="filtrarTabla('cheaper', this)">⚠️ Ellos más baratos</button>
+          <button class="tab" onclick="filtrarTabla('pricier', this)">✅ Yo más barato</button>
+        </div>
+        <input type="text" id="tableSearch" placeholder="Filtrar tabla..."
+               oninput="filtrarTexto(this.value)"
+               style="background:var(--bg);border:1px solid var(--border);color:var(--text);
+                      font-family:'Space Mono',monospace;font-size:12px;padding:7px 12px;
+                      border-radius:8px;outline:none;width:180px">
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable('nombre')">Producto</th>
+            <th onclick="sortTable('competidor')">Competidor</th>
+            <th onclick="sortTable('mi_precio')">Mi precio</th>
+            <th onclick="sortTable('precio_comp')">Precio comp.</th>
+            <th onclick="sortTable('diff')">Diferencia</th>
+            <th>Situación</th>
+            <th>Ver</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+        </tbody>
+      </table>
+
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">Sin resultados todavía</div>
+        <div class="empty-desc">
+          Carga tu catálogo CSV y presiona "Escanear precios"<br>
+          o importa un resultado CSV guardado anteriormente.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════════════════════════
+const PROXY_URL = 'http://localhost:3030';
+let misCatalogo = [];      // Productos cargados desde CSV
+let resultados = [];       // Precios encontrados
+let resultadosFiltrados = [];
+let competidoresActivos = new Set(['guadalajara', 'benavides', 'similares']);
+let escaneoActivo = false;
+let sortCol = null;
+let sortDir = 1;
+let filtroActual = 'todos';
+
+// ══════════════════════════════════════════════════════════════════
+// ESTADO DEL PROXY
+// ══════════════════════════════════════════════════════════════════
+async function verificarProxy() {
+  try {
+    const r = await fetch(`${PROXY_URL}/status`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      setProxyStatus(true);
+      return true;
+    }
+  } catch {}
+  setProxyStatus(false);
+  return false;
+}
+
+function setProxyStatus(ok) {
+  const dot  = document.getElementById('proxyDot');
+  const text = document.getElementById('proxyText');
+  const noticeWarn = document.getElementById('proxyNotice');
+  const noticeOk   = document.getElementById('proxyOk');
+
+  if (ok) {
+    dot.className = 'dot active';
+    text.textContent = 'Proxy conectado';
+    noticeWarn.style.display = 'none';
+    noticeOk.style.display = 'flex';
+  } else {
+    dot.className = 'dot error';
+    text.textContent = 'Proxy offline';
+    noticeWarn.style.display = 'flex';
+    noticeOk.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// TOGGLE COMPETIDORES
+// ══════════════════════════════════════════════════════════════════
+function toggleAll(btn) {
+  const activo = btn.classList.contains('active');
+  if (!activo) {
+    btn.classList.add('active');
+    document.querySelectorAll('.comp-btn[data-comp]').forEach(b => {
+      b.classList.add('active');
+      competidoresActivos.add(b.dataset.comp);
+    });
+  }
+}
+
+function toggleComp(btn) {
+  const comp = btn.dataset.comp;
+  if (btn.classList.contains('active')) {
+    btn.classList.remove('active');
+    competidoresActivos.delete(comp);
+  } else {
+    btn.classList.add('active');
+    competidoresActivos.add(comp);
+  }
+  const allBtn = document.querySelector('.comp-btn.all');
+  if (competidoresActivos.size === 3) allBtn.classList.add('active');
+  else allBtn.classList.remove('active');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// IMPORTAR CSV DE CATÁLOGO
+// ══════════════════════════════════════════════════════════════════
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('importArea').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const texto = e.target.result;
+
+    // Detectar si es catálogo o resultados previos
+    const primeraLinea = texto.split('\n')[0].toLowerCase();
+    if (primeraLinea.includes('competidor') || primeraLinea.includes('precio_comp') || primeraLinea.includes('situacion')) {
+      importarResultados(texto);
+    } else {
+      cargarCatalogo(texto);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+function detectarSep(linea) {
+  return linea.split(';').length > linea.split(',').length ? ';' : ',';
+}
+
+function parsearCSV(texto) {
+  const lineas = texto.trim().split('\n');
+  if (lineas.length < 2) return [];
+
+  const sep = detectarSep(lineas[0]);
+  const cabeceras = lineas[0].split(sep).map(c => c.replace(/^"|"$/g,'').trim().toLowerCase());
+
+  return lineas.slice(1).map(linea => {
+    const vals = linea.split(sep).map(v => v.replace(/^"|"$/g,'').trim());
+    const obj = {};
+    cabeceras.forEach((h, i) => { obj[h] = vals[i] || ''; });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function cargarCatalogo(texto) {
+  const filas = parsearCSV(texto);
+  if (filas.length === 0) { alert('No se pudo leer el CSV'); return; }
+
+  const cab = Object.keys(filas[0]);
+  const get = (...terms) => {
+    for (const t of terms) {
+      const k = cab.find(c => c.includes(t));
+      if (k) return k;
+    }
+    return null;
+  };
+
+  const colClave   = get('clave', 'codigo', 'art_clave', 'code');
+  const colNombre  = get('nombre', 'descripcion', 'description', 'name');
+  const colPrecio  = get('precio_total', 'preciototal', 'precio_venta', 'total', 'precio', 'importe');
+  const colCosto   = get('costo', 'cost');
+  const colMargen  = get('margen', 'margin');
+  const colExist   = get('existencia', 'stock', 'qty');
+  const colProv    = get('proveedor', 'provider');
+  const colDept    = get('familia', 'departamento', 'dept');
+
+  misCatalogo = filas
+    .map(f => ({
+      art_clave:    f[colClave]  || '',
+      nombre:       f[colNombre] || '',
+      precio_propio: parseFloat(f[colPrecio]) || 0,
+      costo:        parseFloat(f[colCosto])  || 0,
+      margen:       parseFloat(f[colMargen]) || 0,
+      existencia:   parseFloat(f[colExist])  || 0,
+      proveedor:    f[colProv]   || '',
+      departamento: f[colDept]   || '',
+    }))
+    .filter(p => p.art_clave && p.nombre)
+    .sort((a, b) => (b.precio_propio * b.existencia) - (a.precio_propio * a.existencia));
+
+  document.getElementById('kpiTotal').textContent = misCatalogo.length.toLocaleString();
+  agregarLog(`✅ Catálogo cargado: ${misCatalogo.length} productos`, 'found');
+  actualizarKPIs();
+}
+
+function importarResultados(texto) {
+  const filas = parsearCSV(texto);
+  if (filas.length === 0) return;
+
+  resultados = filas.map(f => ({
+    art_clave:        f['clave sav'] || f['art_clave'] || f['clave'] || '',
+    nombre:           f['nombre en sav'] || f['mi_nombre'] || f['nombre producto'] || f['nombre'] || '',
+    nombre_comp:      f['nombre en fg'] || f['nombre_encontrado'] || f['nombre_competidor'] || '',
+    competidor:       f['competidor'] || 'guadalajara',
+    mi_precio:        parseFloat(f['mi precio ($)'] || f['mi_precio'] || 0),
+    precio_comp:      parseFloat(f['precio fg ($)'] || f['precio_competidor'] || 0),
+    diff_pct:         parseFloat(f['diferencia (%)'] || f['diferencia_pct'] || 0),
+    situacion:        f['situación'] || f['situacion'] || '',
+    url:              f['url en fg'] || f['url_producto'] || '',
+  })).filter(r => r.nombre);
+
+  mostrarResultados();
+  agregarLog(`📂 ${resultados.length} resultados importados`, 'found');
+  document.getElementById('lastScan').textContent = 'Importado de CSV';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ESCANEO EN TIEMPO REAL (requiere proxy)
+// ══════════════════════════════════════════════════════════════════
+async function iniciarEscaneo() {
+  if (escaneoActivo) return;
+
+  const proxyOk = await verificarProxy();
+  if (!proxyOk) {
+    alert('El proxy no está corriendo.\n\nEn tu terminal, corre:\n  node proxy.js\n\nLuego intenta de nuevo.');
+    return;
+  }
+
+  if (misCatalogo.length === 0) {
+    alert('Primero carga tu catálogo CSV.');
+    return;
+  }
+
+  const topN = parseInt(document.getElementById('topN').value) || 50;
+  const productos = misCatalogo.slice(0, topN);
+  const comps = [...competidoresActivos];
+
+  if (comps.length === 0) {
+    alert('Selecciona al menos un competidor.');
+    return;
+  }
+
+  escaneoActivo = true;
+  resultados = [];
+
+  const btn = document.getElementById('btnScan');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Escaneando...';
+
+  const scanArea = document.getElementById('scanArea');
+  scanArea.classList.add('visible');
+  document.getElementById('scanLog').innerHTML = '';
+
+  let procesados = 0;
+  const total = productos.length * comps.length;
+
+  for (const producto of productos) {
+    for (const comp of comps) {
+      try {
+        agregarLog(`🔍 ${producto.nombre.substring(0,35)}... → ${comp}`);
+
+        const resp = await fetch(`${PROXY_URL}/buscar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ producto, competidor: comp })
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.encontrado) {
+            const diff = producto.precio_propio
+              ? ((data.precio_comp - producto.precio_propio) / producto.precio_propio * 100).toFixed(1)
+              : 0;
+            resultados.push({
+              art_clave:   producto.art_clave,
+              nombre:      producto.nombre,
+              nombre_comp: data.nombre_encontrado,
+              competidor:  comp,
+              mi_precio:   producto.precio_propio,
+              precio_comp: data.precio_comp,
+              diff_pct:    parseFloat(diff),
+              situacion:   data.precio_comp < producto.precio_propio ? 'cheaper' : 'pricier',
+              url:         data.url || ''
+            });
+
+            const icon = data.precio_comp < producto.precio_propio ? '🔴' : '🟢';
+            const tag = comp === 'guadalajara' ? 'FG' : comp === 'benavides' ? 'BEN' : 'SIM';
+            agregarLog(
+              `${icon} ${tag} $${data.precio_comp.toFixed(2)} vs tuyo $${producto.precio_propio.toFixed(2)} — ${diff}%`,
+              data.precio_comp < producto.precio_propio ? 'cheaper' : 'found'
+            );
+          } else {
+            agregarLog(`⚪ No encontrado en ${comp}`, 'notfound');
+          }
+        }
+      } catch (err) {
+        agregarLog(`❌ Error: ${err.message}`, 'notfound');
+      }
+
+      procesados++;
+      const pct = (procesados / total * 100).toFixed(0);
+      document.getElementById('scanBar').style.width = pct + '%';
+      document.getElementById('scanCounter').textContent = `${procesados} / ${total}`;
+      document.getElementById('scanStatus').textContent = `Escaneando...`;
+
+      mostrarResultados();
+    }
+  }
+
+  escaneoActivo = false;
+  btn.disabled = false;
+  btn.innerHTML = '🔍 Escanear precios';
+  document.getElementById('scanStatus').textContent = '✅ Completado';
+  document.getElementById('lastScan').textContent = new Date().toLocaleString('es-MX', { hour:'2-digit', minute:'2-digit' });
+
+  mostrarResultados();
+}
+
+function agregarLog(texto, clase = '') {
+  const log = document.getElementById('scanLog');
+  const line = document.createElement('div');
+  line.textContent = texto;
+  if (clase) line.className = clase;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MOSTRAR RESULTADOS EN TABLA
+// ══════════════════════════════════════════════════════════════════
+const COMP_LABELS = {
+  guadalajara: { label: 'Guadalajara', cls: 'gdl' },
+  benavides:   { label: 'Benavides',   cls: 'ben' },
+  similares:   { label: 'Similares',   cls: 'sim' },
+};
+
+function mostrarResultados() {
+  resultadosFiltrados = aplicarFiltros();
+  renderTabla(resultadosFiltrados);
+  actualizarKPIs();
+}
+
+function aplicarFiltros() {
+  let lista = [...resultados];
+
+  if (filtroActual === 'cheaper') lista = lista.filter(r => r.diff_pct < 0);
+  if (filtroActual === 'pricier') lista = lista.filter(r => r.diff_pct >= 0);
+
+  const busqueda = document.getElementById('tableSearch').value.toLowerCase();
+  if (busqueda) {
+    lista = lista.filter(r =>
+      r.nombre.toLowerCase().includes(busqueda) ||
+      (r.nombre_comp || '').toLowerCase().includes(busqueda) ||
+      r.art_clave.toLowerCase().includes(busqueda)
+    );
+  }
+
+  if (sortCol) {
+    lista.sort((a, b) => {
+      let va = a[sortCol], vb = b[sortCol];
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      return va < vb ? -sortDir : va > vb ? sortDir : 0;
+    });
+  }
+
+  return lista;
+}
+
+function renderTabla(lista) {
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  document.getElementById('countVisible').textContent = lista.length.toLocaleString();
+
+  if (lista.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = lista.map(r => {
+    const diff = r.diff_pct;
+    const cheaperThanMe = diff < 0;
+    const compInfo = COMP_LABELS[r.competidor] || { label: r.competidor, cls: '' };
+    const badgeCls  = cheaperThanMe ? 'cheaper' : 'pricier';
+    const badgeText = cheaperThanMe ? '⚠️ Ellos ganan' : '✅ Yo gano';
+    const diffStr   = (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
+    const diffCls   = diff < 0 ? 'neg' : 'pos';
+    const precioComp = r.precio_comp > 0
+      ? `<span class="price-tag comp">$${r.precio_comp.toFixed(2)}</span>`
+      : `<span style="color:var(--muted)">—</span>`;
+
+    return `
+      <tr class="fade-in">
+        <td class="col-nombre">
+          <div class="nombre-text" title="${r.nombre}">${r.nombre}</div>
+          <div class="clave-text">${r.art_clave}</div>
+        </td>
+        <td><span class="comp-tag ${compInfo.cls}">${compInfo.label}</span></td>
+        <td><span class="price-tag mine">$${r.mi_precio > 0 ? r.mi_precio.toFixed(2) : '—'}</span></td>
+        <td>${precioComp}</td>
+        <td><span class="diff-pct ${diffCls}">${r.precio_comp > 0 ? diffStr : '—'}</span></td>
+        <td>${r.precio_comp > 0 ? `<span class="badge ${badgeCls}">${badgeText}</span>` : '<span class="badge same">Sin precio</span>'}</td>
+        <td>
+          ${r.url
+            ? `<a href="${r.url}" target="_blank" class="link-btn">Ver →</a>`
+            : '<span style="color:var(--muted);font-size:11px">—</span>'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function actualizarKPIs() {
+  const total = misCatalogo.length;
+  const comp  = resultados.length;
+  const cheaper = resultados.filter(r => r.diff_pct < 0);
+  const pricier = resultados.filter(r => r.diff_pct >= 0 && r.precio_comp > 0);
+
+  document.getElementById('kpiTotal').textContent   = total.toLocaleString();
+  document.getElementById('kpiComp').textContent    = comp.toLocaleString();
+  document.getElementById('kpiCheaper').textContent = cheaper.length.toLocaleString();
+  document.getElementById('kpiPricier').textContent = pricier.length.toLocaleString();
+
+  if (cheaper.length > 0) {
+    const max = Math.min(...cheaper.map(r => r.diff_pct));
+    document.getElementById('kpiMaxDiff').textContent = max.toFixed(1) + '%';
+  } else {
+    document.getElementById('kpiMaxDiff').textContent = '—';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FILTROS Y SORT
+// ══════════════════════════════════════════════════════════════════
+function filtrarTabla(filtro, btn) {
+  filtroActual = filtro;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  mostrarResultados();
+}
+
+function filtrarTexto(val) {
+  mostrarResultados();
+}
+
+const SORT_COLS = {
+  nombre:     'nombre',
+  competidor: 'competidor',
+  mi_precio:  'mi_precio',
+  precio_comp:'precio_comp',
+  diff:       'diff_pct',
+};
+
+function sortTable(col) {
+  const key = SORT_COLS[col] || col;
+  if (sortCol === key) sortDir *= -1;
+  else { sortCol = key; sortDir = 1; }
+  document.querySelectorAll('th').forEach(t => t.classList.remove('sorted'));
+  event.target.classList.add('sorted');
+  mostrarResultados();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EXPORTAR CSV
+// ══════════════════════════════════════════════════════════════════
+function exportarCSV() {
+  const datos = resultadosFiltrados.length > 0 ? resultadosFiltrados : resultados;
+  if (datos.length === 0) { alert('No hay datos para exportar.'); return; }
+
+  const cols = [
+    ['art_clave',   'Clave SAV'],
+    ['nombre',      'Nombre'],
+    ['competidor',  'Competidor'],
+    ['nombre_comp', 'Nombre en competidor'],
+    ['mi_precio',   'Mi precio ($)'],
+    ['precio_comp', 'Precio competidor ($)'],
+    ['diff_pct',    'Diferencia (%)'],
+    ['situacion',   'Situación'],
+    ['url',         'URL'],
+  ];
+
+  const enc = cols.map(c => `"${c[1]}"`).join(',');
+  const filas = datos.map(r =>
+    cols.map(c => {
+      const v = r[c[0]];
+      if (typeof v === 'string') return `"${v.replace(/"/g,'""')}"`;
+      return v ?? '';
+    }).join(',')
+  );
+
+  const csv = '\ufeff' + [enc, ...filas].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `precios_competencia_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+verificarProxy();
+setInterval(verificarProxy, 30000); // Re-verificar cada 30s
+</script>
+
+</body>
+</html>

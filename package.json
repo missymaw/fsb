@@ -1,0 +1,20 @@
+{
+  "name": "monitor-precios-farmacia",
+  "version": "1.0.0",
+  "description": "Monitor de precios de competencia — Farmacia San Blas",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "monitor": "node index.js",
+    "reporte": "node reports/report-generator.js",
+    "test-scraper": "node scrapers/guadalajara.js --test"
+  },
+  "dependencies": {
+    "playwright": "^1.43.0",
+    "better-sqlite3": "^9.4.3",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.5",
+    "csv-writer": "^1.6.0",
+    "chalk": "^4.1.2"
+  }
+}
